@@ -1,0 +1,15 @@
+{
+  "name": "sago-staff-portal",
+  "version": "1.0.0",
+  "description": "SaGo Construction & Showroom Staff Management Portal",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "sago",
+    "staff-portal",
+    "management"
+  ],
+  "author": "SaGo",
+  "license": "ISC"
+}

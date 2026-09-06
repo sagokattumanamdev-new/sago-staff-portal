@@ -1,0 +1,40 @@
+/* SaGo brand theme — color sampled from the real logo (#00A878) */
+:root {
+  --green: #00A878;
+  --green-dark: #00855F;
+  --green-deep: #006B4D;
+  --green-50: #E7F7F1;
+  --green-100: #C7EDE0;
+  --wa: #25D366;
+  --wa-dark: #128C7E;
+  --ink: #0F2A21;
+  --muted: #5F7268;
+  --line: #E3EDE8;
+  --bg: #F3F7F5;
+  --card: #FFFFFF;
+  --amber-bg: #FFF3D6; --amber: #8A6414;
+  --blue-bg: #E8F0FE; --blue: #2F6FED;
+  --gray-bg: #EEF1F4; --gray: #5F6B74;
+  --red-bg: #FDECEC;  --red: #D64545;
+  --radius: 16px;
+  --shadow: 0 6px 24px rgba(9, 60, 45, .08);
+  --tabbar-h: 64px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
+  background: var(--bg); color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--green-dark); }
+img { max-width: 100%; }
+.boot { padding: 48px; text-align: center; color: var(--muted); }
+.ic { width: 20px; height: 20px; flex: none; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.grow { flex: 1; min-width: 0; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.center-col { width: 100%; max-width: 560px; margin: 0 auto; }
