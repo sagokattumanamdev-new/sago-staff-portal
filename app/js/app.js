@@ -1,9 +1,12 @@
 // ============================================================
 // BOOT + tiny hash router with auth guard
 // ============================================================
-import { DB } from './db/adapter.js?v=050';
-import { renderLogin } from './pages/login.js?v=050';
-import { renderDashboard } from './pages/dash.js?v=050';
+import { DB } from './db/adapter.js?v=060';
+import { renderLogin } from './pages/login.js?v=060';
+import { renderDashboard } from './pages/dash.js?v=060';
+import { initPWA } from './pwa.js?v=060';
+
+initPWA();
 
 const root = document.getElementById('app');
 let splashHidden = false;

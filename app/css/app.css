@@ -10,6 +10,58 @@
 .hdr-user .r { font-size: 10px; opacity: .85; }
 .icon-btn { padding: 8px; border-radius: 10px; color: inherit; display: inline-flex; }
 .icon-btn:hover { background: rgba(255,255,255,.18); }
+.hdr-install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.hdr-install-btn:hover {
+  background: #fff;
+  color: var(--green-deep);
+  border-color: #fff;
+}
+.hdr-install-btn .ic {
+  width: 14px;
+  height: 14px;
+}
+@media (max-width: 440px) {
+  .hdr-user { display: none; }
+}
+.login-install-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--green-50);
+  border: 1.5px dashed var(--green);
+  color: var(--green-deep);
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.login-install-btn:hover {
+  background: var(--green-100);
+}
+.login-install-btn .ic {
+  width: 18px;
+  height: 18px;
+}
+
 
 /* ===== Page ===== */
 .page { padding: 14px 14px calc(var(--tabbar-h) + 24px); }

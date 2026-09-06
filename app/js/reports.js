@@ -475,7 +475,7 @@ export function generatePDFReport(ctx) {
     printWin.document.close();
     toast('Report generated! Click "Print / Save as PDF"');
   } else {
-    toast('Pop-up blocked! Please allow pop-ups for localhost.');
+    toast('Pop-up blocked! Please allow pop-ups in your browser settings.');
   }
 }
 

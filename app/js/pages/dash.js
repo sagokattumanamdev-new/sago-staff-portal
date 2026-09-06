@@ -2,14 +2,15 @@
 // DASHBOARD — one shell, role-driven tabs:
 //   Super Admin (SAGO) / Admin / Manager / Employee
 // ============================================================
-import { DB } from '../db/adapter.js?v=050';
-import { CONFIG } from '../config.js?v=050';
-import { openExportModal, generatePDFReport, exportCSVReport } from '../reports.js?v=050';
+import { DB } from '../db/adapter.js?v=060';
+import { CONFIG } from '../config.js?v=060';
+import { openExportModal, generatePDFReport, exportCSVReport } from '../reports.js?v=060';
 import {
   esc, icon, avatarHTML, initials, roleBadge, statusPill, prioPill,
   toast, openSheet, waLink, todayKey, fmtDateKey, timeAgo,
   greeting, firstName, roleLabel, dueMeta, fileToDataURL
-} from '../ui.js?v=050';
+} from '../ui.js?v=060';
+import { createInstallButtonHTML, bindInstallButton } from '../pwa.js?v=060';
 
 const TAB_ICON = {
   overview: 'home', people: 'people', team: 'people',
@@ -34,6 +35,7 @@ export async function renderDashboard(root, user, tab) {
       <div><div class="hdr-name">${esc(CONFIG.company)} Staff</div>
       <div class="hdr-sub">${esc(CONFIG.tagline)}</div></div>
       <div class="hdr-right">
+        ${createInstallButtonHTML('hdr-install-btn', 'Install App')}
         <div class="hdr-user"><div class="n">${esc(user.name)}</div>
         <div class="r">${esc(roleLabel(user.role))}${user.dept && user.dept !== '—' ? ' · ' + esc(user.dept) : ''}</div></div>
         ${avatarHTML(user.name, 34)}
@@ -47,6 +49,8 @@ export async function renderDashboard(root, user, tab) {
           ${icon(TAB_ICON[id])}<span>${label}</span>
         </button>`).join('')}
     </div></nav>`;
+
+  bindInstallButton(root);
 
   root.querySelector('#logoutBtn').addEventListener('click', async () => {
     await DB.signOut(); location.hash = '#/login';
@@ -247,7 +251,8 @@ function openAddSheet(root, user) {
 }
 
 function showCredentialsSheet(root, user, creds) {
-  const credMsg = `SaGo Staff Portal Login Details:\nName: ${creds.name}\nRole: ${creds.role}\nEmail: ${creds.email}\nPassword: ${creds.pass}\nURL: http://localhost:8420`;
+  const portalUrl = window.location.origin;
+  const credMsg = `SaGo Staff Portal Login Details:\nName: ${creds.name}\nRole: ${creds.role}\nEmail: ${creds.email}\nPassword: ${creds.pass}\nURL: ${portalUrl}`;
 
   const credSheet = openSheet(`
     <div style="text-align:center">

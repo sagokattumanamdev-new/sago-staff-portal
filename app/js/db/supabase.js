@@ -167,6 +167,8 @@ async function resolveProfile(authUser) {
 // ---------- auth ----------
 export async function signInPassword(email, pass) {
   const norm = String(email || '').trim().toLowerCase();
+  const cleanPass = String(pass || '').trim();
+  const cleanPassLower = cleanPass.toLowerCase();
   
   // 1. Look up if profile exists in Supabase DB by email or handle
   let dbProfile = null;
@@ -182,11 +184,13 @@ export async function signInPassword(email, pass) {
   const match = SYSTEM_ROSTER.find(u => {
     const ue = u.email.toLowerCase();
     const aliases = (u.aliases || []).map(a => a.toLowerCase());
-    return ue === norm || aliases.includes(norm) || ue === norm + '.com' || ue.split('@')[0] === norm.split('@')[0];
+    const handle = ue.split('@')[0];
+    return ue === norm || aliases.includes(norm) || ue === norm + '.com' || handle === norm.split('@')[0] || norm.includes(handle);
   });
 
   if (match) {
-    if (match.pass === pass) {
+    const expectedPass = String(match.pass || '').trim();
+    if (expectedPass === cleanPass || expectedPass.toLowerCase() === cleanPassLower) {
       const user = {
         ...match,
         ...(dbProfile ? {
@@ -220,7 +224,7 @@ export async function signInPassword(email, pass) {
   // 3. Try Supabase Auth
   try {
     const sb = await client();
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    const { data, error } = await sb.auth.signInWithPassword({ email: norm, password: cleanPass });
     if (!error && data?.user) {
       const user = await resolveProfile(data.user);
       if (user && !user.unauthorized) {
@@ -234,14 +238,14 @@ export async function signInPassword(email, pass) {
   if (dbProfile) {
     const cleanHandle = dbProfile.name.toLowerCase().replace(/[^a-z0-9]/g, '');
     const validPasses = ['sagostaff', 'pavisathya', `${cleanHandle}sago`, `${cleanHandle}@sago`, '123456', 'sago123'];
-    if (validPasses.includes(pass) || pass.toLowerCase().includes(cleanHandle)) {
+    if (validPasses.includes(cleanPass) || validPasses.includes(cleanPassLower) || cleanPassLower.includes(cleanHandle)) {
       const user = { ...dbProfile };
       localStorage.setItem('sago_cloud_session', JSON.stringify(user));
       return { user };
     }
   }
 
-  return { error: 'Wrong email or password.' };
+  return { error: 'Wrong login ID or password.' };
 }
 
 export async function signInGoogle() {
