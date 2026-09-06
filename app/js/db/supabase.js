@@ -730,9 +730,43 @@ export async function reopenTask(taskId, actor) {
   return { task: found || { id: taskId, status: 'in-progress' } };
 }
 
+async function uploadTaskPhoto(dataUrl, taskId, userId) {
+  if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
+  try {
+    const sb = await client();
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const mime = blob.type || 'image/jpeg';
+    const ext = mime.split('/')[1] || 'jpg';
+    const filename = `${taskId}_${userId || 'anon'}_${Date.now()}.${ext}`;
+    const path = `proofs/${filename}`;
+
+    const { data, error } = await sb.storage.from('sago-proofs').upload(path, blob, {
+      contentType: mime,
+      upsert: true
+    });
+
+    if (!error) {
+      const { data: publicUrlData } = sb.storage.from('sago-proofs').getPublicUrl(path);
+      if (publicUrlData?.publicUrl) {
+        return publicUrlData.publicUrl;
+      }
+    }
+  } catch (e) {
+    console.warn('Storage upload note:', e);
+  }
+  return dataUrl;
+}
+
 export async function replyTask(taskId, user, text, photo) {
   const txt = String(text || '').trim();
   if (!txt && !photo) return { error: 'Type a reply or attach a photo.' };
+
+  // Upload photo to Supabase storage if available
+  let uploadedPhoto = photo;
+  if (photo) {
+    uploadedPhoto = await uploadTaskPhoto(photo, taskId, user?.id);
+  }
 
   const replyObj = {
     id: 'r_' + Date.now().toString(36),
@@ -741,7 +775,7 @@ export async function replyTask(taskId, user, text, photo) {
     by: user.id,
     name: user.name,
     text: txt,
-    photo: photo || null,
+    photo: uploadedPhoto || null,
     at: new Date().toISOString(),
     created_at: new Date().toISOString()
   };
@@ -762,7 +796,7 @@ export async function replyTask(taskId, user, text, photo) {
       user_id: user.id,
       name: user.name,
       text: txt,
-      photo: photo || null
+      photo: uploadedPhoto || null
     }]);
     await sb.from('tasks').update({ status: 'in-progress' }).eq('id', taskId).eq('status', 'assigned');
   } catch (e) {}
