@@ -114,22 +114,53 @@ export const firstName = name =>
   String(name).replace(/^(Er\.|Mr\.|Ms\.|Dr\.)\s*/i, '').trim().split(/\s+/)[0];
 export const roleLabel = r => (ROLE_STYLE[r] || ROLE_STYLE.employee)[2];
 
-// ---------- photos (demo: compress & store on this device) ----------
-export const fileToDataURL = (file, maxDim = 1000, quality = 0.72) => new Promise((resolve, reject) => {
+// ---------- photos: smart adaptive compressor strictly targeting ~100 KB per photo ----------
+export const fileToDataURL = (file, targetMaxKB = 100) => new Promise((resolve, reject) => {
   if (!file) return reject(new Error('No file chosen.'));
-  if (file.size > 10 * 1024 * 1024) return reject(new Error('Photo is larger than 10 MB.'));
+  if (file.size > 25 * 1024 * 1024) return reject(new Error('Photo is larger than 25 MB.'));
+
   const img = new Image();
   const url = URL.createObjectURL(file);
+
   img.onload = () => {
-    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(img.width * scale));
-    c.height = Math.max(1, Math.round(img.height * scale));
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
-    resolve(c.toDataURL('image/jpeg', quality));
+    let maxDim = 1080;
+    let quality = 0.75;
+    let dataUrl = '';
+
+    // Smart multi-pass compressor to guarantee crisp visual clarity at ~100 KB
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+
+      dataUrl = c.toDataURL('image/jpeg', quality);
+      const head = 'data:image/jpeg;base64,'.length;
+      const bytes = Math.round((dataUrl.length - head) * 0.75);
+
+      if (bytes <= (targetMaxKB + 15) * 1024 || attempt === 4) {
+        break;
+      }
+
+      if (bytes > targetMaxKB * 1024 * 1.5) {
+        maxDim = Math.round(maxDim * 0.85);
+        quality = Math.max(0.55, quality - 0.08);
+      } else {
+        quality = Math.max(0.55, quality - 0.06);
+      }
+    }
+
+    resolve(dataUrl);
   };
-  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read that image.')); };
+
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    reject(new Error('Could not read image file.'));
+  };
+
   img.src = url;
 });
 
