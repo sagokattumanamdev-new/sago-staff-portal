@@ -492,16 +492,38 @@ async function tabTasks(page, root, user) {
     fileInp?.addEventListener('change', async () => {
       const f = fileInp.files[0];
       if (!f) return;
+      slot.innerHTML = `<span class="photo-chip" style="opacity:0.8">${icon('camera')} Processing photo…</span>`;
       try {
         photo = await fileToDataURL(f);
-        slot.innerHTML = `<span class="photo-chip">${icon('camera')} Photo attached <b data-rm style="cursor:pointer">✕</b></span>`;
+        slot.innerHTML = `
+          <div class="photo-preview-box" style="display:flex;align-items:center;gap:8px;margin-top:6px;background:var(--card);padding:6px 10px;border-radius:8px;border:1px solid var(--border)">
+            <img src="${photo}" style="width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--border);cursor:pointer" alt="proof preview" data-preview-current />
+            <span style="font-size:12px;font-weight:600;color:var(--green)">${icon('camera')} Photo ready</span>
+            <b data-rm style="cursor:pointer;margin-left:auto;color:var(--red);font-size:14px;padding:2px 6px" title="Remove photo">✕</b>
+          </div>`;
         slot.querySelector('[data-rm]').onclick = () => { photo = null; slot.innerHTML = ''; fileInp.value = ''; };
-      } catch (e) { toast(e.message); }
+        slot.querySelector('[data-preview-current]').onclick = () => {
+          openSheet(`<img src="${photo}" style="width:100%;border-radius:12px" alt="proof" />`);
+        };
+      } catch (e) {
+        slot.innerHTML = '';
+        toast(e.message || 'Could not load photo');
+      }
     });
+
     card.querySelector('[data-send]')?.addEventListener('click', async () => {
-      const r = await DB.replyTask(card.dataset.task, user, ta.value, photo);
+      const sendBtn = card.querySelector('[data-send]');
+      const textVal = ta.value.trim();
+      if (!textVal && !photo) {
+        return toast('Please type a reply or take a proof photo.');
+      }
+      sendBtn.disabled = true;
+      sendBtn.style.opacity = '0.5';
+      const r = await DB.replyTask(card.dataset.task, user, textVal, photo);
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
       if (r.error) return toast(r.error);
-      toast(photo ? 'Proof sent ✅' : 'Reply sent ✅');
+      toast(photo ? 'Proof photo & reply sent ✅' : 'Reply sent ✅');
       renderDashboard(root, user, 'tasks');
     });
     card.querySelector('[data-verify]')?.addEventListener('click', async () => {

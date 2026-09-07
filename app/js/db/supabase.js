@@ -28,17 +28,37 @@ const dateKey = (offset = 0) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
+function getLocalHistory() {
+  try {
+    const s = localStorage.getItem('sago_history_cache_v2');
+    return s ? JSON.parse(s) : [];
+  } catch (e) { return []; }
+}
+function saveLocalHistory(hist) {
+  try {
+    localStorage.setItem('sago_history_cache_v2', JSON.stringify(hist.slice(0, 100)));
+  } catch (e) {}
+}
+
 async function logHistory(actor, subjectId, text) {
+  const actorId = (actor?.id && String(actor.id).length === 36) ? actor.id : null;
+  const entry = {
+    id: genUUID(),
+    actor_id: actorId,
+    actor_name: actor?.name || 'System',
+    subject_id: subjectId ? String(subjectId) : null,
+    text: String(text),
+    created_at: new Date().toISOString()
+  };
+
+  const cur = getLocalHistory();
+  saveLocalHistory([entry, ...cur]);
+
   try {
     const sb = await client();
-    await sb.from('history').insert([{
-      actor_id: actor?.id || null,
-      actor_name: actor?.name || 'System',
-      subject_id: subjectId ? String(subjectId) : null,
-      text: String(text)
-    }]);
+    await sb.from('history').insert([entry]);
   } catch (e) {
-    console.warn('History log failed:', e);
+    console.warn('History log notice:', e);
   }
 }
 
@@ -706,7 +726,8 @@ export async function verifyTask(taskId, actor) {
     }).eq('id', taskId);
   } catch (e) {}
 
-  await logHistory(actor, taskId, `${actor.name} verified ✅ task`);
+  const taskTitle = found?.title ? `“${found.title}”` : 'task';
+  await logHistory(actor, found?.assignedTo || found?.assigned_to || taskId, `${actor.name} verified ✅ ${taskTitle}`);
   return { task: found || { id: taskId, status: 'done' } };
 }
 
@@ -731,20 +752,24 @@ export async function updateTask(taskId, patch, actor) {
     await sb.from('tasks').update(updateObj).eq('id', taskId);
   } catch (e) {}
 
-  await logHistory(actor, taskId, `${actor.name} edited task`);
+  const taskTitle = found?.title ? `“${found.title}”` : 'task';
+  await logHistory(actor, found?.assignedTo || found?.assigned_to || taskId, `${actor.name} edited ${taskTitle}`);
   return { task: found || { id: taskId } };
 }
 
 export async function deleteTask(taskId, actor) {
   const cur = getLocalTasks();
+  const found = cur.find(x => x.id === taskId);
   saveLocalTasks(cur.filter(x => x.id !== taskId));
 
   try {
     const sb = await client();
+    await sb.from('task_replies').delete().eq('task_id', taskId);
     await sb.from('tasks').delete().eq('id', taskId);
   } catch (e) {}
 
-  await logHistory(actor, taskId, `${actor.name} deleted task`);
+  const taskTitle = found?.title ? `“${found.title}”` : 'task';
+  await logHistory(actor, found?.assignedTo || found?.assigned_to || taskId, `${actor.name} deleted ${taskTitle}`);
   return { ok: true };
 }
 
@@ -769,48 +794,16 @@ export async function reopenTask(taskId, actor) {
     }).eq('id', taskId);
   } catch (e) {}
 
-  await logHistory(actor, taskId, `${actor.name} reopened 🔁 task`);
+  const taskTitle = found?.title ? `“${found.title}”` : 'task';
+  await logHistory(actor, found?.assignedTo || found?.assigned_to || taskId, `${actor.name} reopened 🔁 ${taskTitle}`);
   return { task: found || { id: taskId, status: 'in-progress' } };
-}
-
-async function uploadTaskPhoto(dataUrl, taskId, userId) {
-  if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
-  try {
-    const sb = await client();
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    const mime = blob.type || 'image/jpeg';
-    const ext = mime.split('/')[1] || 'jpg';
-    const filename = `${taskId}_${userId || 'anon'}_${Date.now()}.${ext}`;
-    const path = `proofs/${filename}`;
-
-    const { data, error } = await sb.storage.from('sago-proofs').upload(path, blob, {
-      contentType: mime,
-      upsert: true
-    });
-
-    if (!error) {
-      const { data: publicUrlData } = sb.storage.from('sago-proofs').getPublicUrl(path);
-      if (publicUrlData?.publicUrl) {
-        return publicUrlData.publicUrl;
-      }
-    }
-  } catch (e) {
-    console.warn('Storage upload note:', e);
-  }
-  return dataUrl;
 }
 
 export async function replyTask(taskId, user, text, photo) {
   const txt = String(text || '').trim();
   if (!txt && !photo) return { error: 'Type a reply or attach a photo.' };
 
-  // Upload photo to Supabase storage if available
-  let uploadedPhoto = photo;
-  if (photo) {
-    uploadedPhoto = await uploadTaskPhoto(photo, taskId, user?.id);
-  }
-
+  const finalTxt = txt || '📷 Proof photo submitted';
   const replyId = genUUID();
   const replyObj = {
     id: replyId,
@@ -818,8 +811,8 @@ export async function replyTask(taskId, user, text, photo) {
     user_id: user.id,
     by: user.id,
     name: user.name,
-    text: txt,
-    photo: uploadedPhoto || null,
+    text: finalTxt,
+    photo: photo || null,
     at: new Date().toISOString(),
     created_at: new Date().toISOString()
   };
@@ -840,36 +833,60 @@ export async function replyTask(taskId, user, text, photo) {
       task_id: taskId,
       user_id: user.id,
       name: user.name,
-      text: txt,
-      photo: uploadedPhoto || null
+      text: finalTxt,
+      photo: photo || null
     }]);
     await sb.from('tasks').update({ status: 'in-progress' }).eq('id', taskId).eq('status', 'assigned');
   } catch (e) {
     console.warn('Reply insert notice:', e);
   }
 
-  await logHistory(user, taskId, `${user.name} ${photo ? 'sent a proof photo 📷' : 'replied'} on task`);
+  const taskTitle = found?.title ? `“${found.title}”` : '';
+  await logHistory(user, found?.assignedTo || taskId, `${user.name} ${photo ? 'sent a proof photo 📷' : 'replied'} on task ${taskTitle}`);
   return { reply: replyObj };
 }
 
 // ---------- history & settings ----------
 export async function historyFor(user) {
-  const sb = await client();
-  let query = sb.from('history').select('*').order('created_at', { ascending: false }).limit(100);
+  let cloudHistory = [];
+  try {
+    const sb = await client();
+    const { data, error } = await sb.from('history').select('*').order('created_at', { ascending: false }).limit(100);
+    if (!error && data) {
+      cloudHistory = data;
+      saveLocalHistory(data);
+    }
+  } catch (e) {}
 
-  if (user.role !== 'superadmin' && user.role !== 'admin') {
-    query = query.or(`actor_id.eq.${user.id},subject_id.eq.${user.id}`);
+  const localHistory = getLocalHistory();
+  const allMap = new Map();
+  [...cloudHistory, ...localHistory].forEach(h => {
+    if (h && h.id && !allMap.has(h.id)) allMap.set(h.id, h);
+  });
+  const allEvents = Array.from(allMap.values());
+
+  const uid = String(user?.id || '').toLowerCase();
+  const uName = String(user?.name || '').toLowerCase().trim();
+  const isSuperOrAdmin = user?.role === 'superadmin' || user?.role === 'admin';
+
+  let filtered = allEvents;
+  if (!isSuperOrAdmin) {
+    filtered = allEvents.filter(h => {
+      const aId = String(h.actor_id || h.actorId || '').toLowerCase();
+      const sId = String(h.subject_id || h.subjectId || '').toLowerCase();
+      const txt = String(h.text || '').toLowerCase();
+      return aId === uid || sId === uid || (uName && txt.includes(uName));
+    });
   }
 
-  const { data } = await query;
-  return (data || []).map(h => ({
+  return filtered.map(h => ({
     id: h.id,
-    actorId: h.actor_id,
-    actorName: h.actor_name,
-    subjectId: h.subject_id,
+    actorId: h.actor_id || h.actorId,
+    actorName: h.actor_name || h.actorName || 'System',
+    subjectId: h.subject_id || h.subjectId,
     text: h.text,
-    at: h.created_at
-  }));
+    at: h.created_at || h.at
+  })).sort((a, b) => new Date(b.at) - new Date(a.at));
 }
 
 export async function settings() {
