@@ -627,7 +627,7 @@ function openTaskSheet(root, user, mode, task, targets) {
 }
 
 /* =============== HISTORY =============== */
-async function tabHistory(page, user) {
+async function tabHistory(page, root, user) {
   const rows = await DB.historyFor(user);
   const own = !canManage(user);
   page.innerHTML = `
@@ -644,7 +644,7 @@ async function tabHistory(page, user) {
 }
 
 /* =============== WHATSAPP GROUP (employee) =============== */
-async function tabGroup(page, user) {
+async function tabGroup(page, root, user) {
   const [s, people] = await Promise.all([DB.settings(), DB.listPeople()]);
   const contacts = people.filter(p => ['admin', 'manager'].includes(p.role));
   page.innerHTML = `
