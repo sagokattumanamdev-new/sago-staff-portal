@@ -171,3 +171,13 @@ export const dueMeta = (due, status) => {
   if (due < todayKey()) return { text: 'Overdue', cls: 'due-over' };
   return { text: 'Due ' + fmtDateKey(due), cls: 'due-ok' };
 };
+
+// ---------- image download helper ----------
+export function downloadImage(dataUrlOrSrc, filename = 'sago-proof.jpg') {
+  const link = document.createElement('a');
+  link.href = dataUrlOrSrc;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

@@ -8,8 +8,8 @@ import { openExportModal, generatePDFReport, exportCSVReport } from '../reports.
 import {
   esc, icon, avatarHTML, initials, roleBadge, statusPill, prioPill,
   toast, openSheet, waLink, todayKey, fmtDateKey, timeAgo,
-  greeting, firstName, roleLabel, dueMeta, fileToDataURL
-} from '../ui.js?v=073';
+  greeting, firstName, roleLabel, dueMeta, fileToDataURL, downloadImage
+} from '../ui.js?v=077';
 import { createInstallButtonHTML, bindInstallButton } from '../pwa.js?v=073';
 
 const TAB_ICON = {
@@ -397,7 +397,11 @@ function taskCard(t, user, name) {
         <div class="rep-body">
           <div class="rep-meta"><b>${esc(r.name)}</b> · ${timeAgo(r.at)}</div>
           ${esc(r.text || '')}
-          ${r.photo ? `<img class="rep-photo" src="${r.photo}" data-view alt="proof photo" />` : ''}
+          ${r.photo ? `
+            <div class="rep-photo-container">
+              <img class="rep-photo" src="${r.photo}" data-view data-author="${esc(r.name)}" data-time="${esc(timeAgo(r.at))}" alt="proof photo" />
+              <button class="rep-photo-dl" data-dl="${esc(r.photo)}" data-name="${esc(r.name)}" title="Download photo">${icon('download')}</button>
+            </div>` : ''}
         </div>
       </div>`).join('')}
     ${isDone
@@ -532,7 +536,42 @@ async function tabTasks(page, root, user) {
     });
   });
   page.querySelectorAll('[data-view]').forEach(im => im.addEventListener('click', () => {
-    openSheet(`<img src="${im.src}" style="width:100%;border-radius:12px" alt="proof" />`);
+    const author = im.dataset.author ? `Proof by ${im.dataset.author}` : 'Proof Photo';
+    const time = im.dataset.time || '';
+    const safeName = (im.dataset.author || 'sago_proof').toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now() + '.jpg';
+
+    const sh = openSheet(`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <b style="font-size:15px">${esc(author)}</b>
+          ${time ? `<div class="muted small">${esc(time)}</div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:center;background:#080808;border-radius:12px;overflow:hidden;margin-bottom:14px;max-height:60vh;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)">
+        <img src="${im.src}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px" alt="proof" />
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" id="dlSheetBtn" style="flex:1">
+          ${icon('download')} Download Photo (.jpg)
+        </button>
+        <button class="btn-ghost" id="closeSheetBtn" style="width:auto">Close</button>
+      </div>
+    `);
+
+    sh.el.querySelector('#dlSheetBtn').onclick = () => {
+      downloadImage(im.src, safeName);
+      toast('Photo downloading… ⬇');
+    };
+    sh.el.querySelector('#closeSheetBtn').onclick = sh.close;
+  }));
+
+  page.querySelectorAll('[data-dl]').forEach(btn => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const src = btn.dataset.dl;
+    const author = btn.dataset.name || 'sago_proof';
+    const safeName = author.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now() + '.jpg';
+    downloadImage(src, safeName);
+    toast('Photo downloading… ⬇');
   }));
 }
 
