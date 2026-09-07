@@ -25,15 +25,9 @@ const TABS = {
 };
 const canManage = u => ['superadmin', 'admin'].includes(u.role);
 
-let _activeTab = 'overview';
-let _activeUser = null;
-let _refreshInterval = null;
-
 export async function renderDashboard(root, user, tab) {
   const tabs = TABS[user.role] || TABS.employee;
   tab = tab || tabs[0][0];
-  _activeTab = tab;
-  _activeUser = user;
 
   root.innerHTML = `
     <header class="hdr"><div class="hdr-inner">
@@ -59,33 +53,12 @@ export async function renderDashboard(root, user, tab) {
   bindInstallButton(root);
 
   root.querySelector('#logoutBtn').addEventListener('click', async () => {
-    if (_refreshInterval) clearInterval(_refreshInterval);
     await DB.signOut(); location.hash = '#/login';
   });
   root.querySelectorAll('.tab').forEach(b =>
     b.addEventListener('click', () => renderDashboard(root, user, b.dataset.tab)));
 
   await renderTab(root.querySelector('#page'), root, user, tab);
-
-  // Auto-refresh when window gains focus or every 12 seconds if not actively typing
-  if (!_refreshInterval) {
-    _refreshInterval = setInterval(async () => {
-      if (document.hidden) return;
-      const isTyping = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-      if (isTyping) return;
-      const pageEl = root.querySelector('#page');
-      if (pageEl && _activeUser) {
-        await renderTab(pageEl, root, _activeUser, _activeTab);
-      }
-    }, 12000);
-
-    window.addEventListener('focus', async () => {
-      const pageEl = root.querySelector('#page');
-      if (pageEl && _activeUser) {
-        await renderTab(pageEl, root, _activeUser, _activeTab);
-      }
-    });
-  }
 }
 
 async function renderTab(page, root, user, tab) {
