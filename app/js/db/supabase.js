@@ -181,11 +181,17 @@ export async function signInPassword(email, pass) {
   } catch (e) {}
 
   // 2. Check built-in roster
+  const inputHandle = norm.includes('@') ? norm.split('@')[0] : norm;
   const match = SYSTEM_ROSTER.find(u => {
     const ue = u.email.toLowerCase();
+    const userHandle = ue.split('@')[0];
     const aliases = (u.aliases || []).map(a => a.toLowerCase());
-    const handle = ue.split('@')[0];
-    return ue === norm || aliases.includes(norm) || ue === norm + '.com' || handle === norm.split('@')[0] || norm.includes(handle);
+    return (
+      ue === norm ||
+      aliases.includes(norm) ||
+      userHandle === inputHandle ||
+      aliases.some(a => (a.includes('@') ? a.split('@')[0] : a) === inputHandle)
+    );
   });
 
   if (match) {

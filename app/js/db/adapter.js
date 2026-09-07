@@ -3,9 +3,9 @@
 // If Supabase keys exist in config.js → real cloud backend.
 // Otherwise → demo backend on this device. Nothing else changes.
 // ============================================================
-import { isSupabaseConfigured } from '../config.js?v=050';
-import * as demo from './demo.js?v=050';
-import * as sb from './supabase.js?v=050';
+import { isSupabaseConfigured } from '../config.js?v=070';
+import * as demo from './demo.js?v=070';
+import * as sb from './supabase.js?v=070';
 
 const impl = () => (isSupabaseConfigured() ? sb : demo);
 
