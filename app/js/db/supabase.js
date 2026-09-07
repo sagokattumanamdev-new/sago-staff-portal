@@ -286,19 +286,19 @@ export async function signOut() {
 }
 
 export async function currentUser() {
-  // 1. Check Supabase Google auth session
-  try {
-    const sb = await client();
-    const { data } = await sb.auth.getUser();
-    if (data?.user) {
-      return resolveProfile(data.user);
-    }
-  } catch (e) {}
-
-  // 2. Check local cloud session
+  // 1. Check local cloud session first (instant 0ms)
   try {
     const saved = localStorage.getItem('sago_cloud_session');
     if (saved) return JSON.parse(saved);
+  } catch (e) {}
+
+  // 2. Check Supabase session if present
+  try {
+    const sb = await client();
+    const { data: sessionData } = await sb.auth.getSession();
+    if (sessionData?.session?.user) {
+      return resolveProfile(sessionData.session.user);
+    }
   } catch (e) {}
 
   return null;

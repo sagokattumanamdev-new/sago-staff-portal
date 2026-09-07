@@ -2,7 +2,7 @@
 // UI kit — inline SVG icons (no external files), avatars,
 // toast, bottom-sheet modal, formatting helpers.
 // ============================================================
-import { CONFIG } from './config.js?v=050';
+import { CONFIG } from './config.js?v=073';
 
 export const esc = s => String(s ?? '').replace(/[&<>"']/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

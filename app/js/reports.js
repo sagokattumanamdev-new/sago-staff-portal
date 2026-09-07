@@ -2,9 +2,9 @@
 // REPORTS & DATA EXPORT ENGINE (Admin & Super Admin)
 // Generates professional, printable A4 PDF reports & CSV exports
 // ============================================================
-import { DB } from './db/adapter.js?v=050';
-import { CONFIG } from './config.js?v=050';
-import { esc, icon, toast, openSheet, todayKey, fmtDateKey, roleLabel, statusPill, prioPill } from './ui.js?v=050';
+import { DB } from './db/adapter.js?v=073';
+import { CONFIG } from './config.js?v=073';
+import { esc, icon, toast, openSheet, todayKey, fmtDateKey, roleLabel, statusPill, prioPill } from './ui.js?v=073';
 
 export async function openExportModal(root, user, defaultReport = 'master') {
   const [people, staff, tasks, historyData, attPack] = await Promise.all([

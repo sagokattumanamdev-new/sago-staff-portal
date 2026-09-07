@@ -1,10 +1,10 @@
 // ============================================================
 // BOOT + tiny hash router with auth guard
 // ============================================================
-import { DB } from './db/adapter.js?v=060';
-import { renderLogin } from './pages/login.js?v=060';
-import { renderDashboard } from './pages/dash.js?v=060';
-import { initPWA } from './pwa.js?v=060';
+import { DB } from './db/adapter.js?v=073';
+import { renderLogin } from './pages/login.js?v=073';
+import { renderDashboard } from './pages/dash.js?v=073';
+import { initPWA } from './pwa.js?v=073';
 
 initPWA();
 
@@ -16,13 +16,11 @@ function hideSplash() {
   splashHidden = true;
   const s = document.getElementById('splash');
   if (!s) return;
-  setTimeout(() => {
-    s.classList.add('done');
-    setTimeout(() => s.remove(), 520);
-  }, 750); // let the brand animation play once, then reveal the app
+  s.classList.add('done');
+  setTimeout(() => s.remove(), 400);
 }
 
-import { toast } from './ui.js?v=050';
+import { toast } from './ui.js?v=073';
 
 async function route() {
   const user = await DB.currentUser();

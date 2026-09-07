@@ -2,7 +2,7 @@
 // PWA Installation & Service Worker Manager
 // Supports Android (Chrome), Desktop (Chrome/Edge), and iOS (Safari)
 // ============================================================
-import { openSheet, toast, icon } from './ui.js?v=060';
+import { openSheet, toast, icon } from './ui.js?v=073';
 
 let deferredPrompt = null;
 const listeners = new Set();

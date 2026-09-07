@@ -2,15 +2,15 @@
 // DASHBOARD — one shell, role-driven tabs:
 //   Super Admin (SAGO) / Admin / Manager / Employee
 // ============================================================
-import { DB } from '../db/adapter.js?v=072';
-import { CONFIG } from '../config.js?v=072';
-import { openExportModal, generatePDFReport, exportCSVReport } from '../reports.js?v=072';
+import { DB } from '../db/adapter.js?v=073';
+import { CONFIG } from '../config.js?v=073';
+import { openExportModal, generatePDFReport, exportCSVReport } from '../reports.js?v=073';
 import {
   esc, icon, avatarHTML, initials, roleBadge, statusPill, prioPill,
   toast, openSheet, waLink, todayKey, fmtDateKey, timeAgo,
   greeting, firstName, roleLabel, dueMeta, fileToDataURL
-} from '../ui.js?v=072';
-import { createInstallButtonHTML, bindInstallButton } from '../pwa.js?v=072';
+} from '../ui.js?v=073';
+import { createInstallButtonHTML, bindInstallButton } from '../pwa.js?v=073';
 
 const TAB_ICON = {
   overview: 'home', people: 'people', team: 'people',
