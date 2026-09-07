@@ -1,5 +1,5 @@
 // SaGo Staff Portal — Service Worker for PWA installability & offline fallback
-const CACHE_NAME = 'sago-portal-v1.2';
+const CACHE_NAME = 'sago-portal-v1.3';
 const STATIC_ASSETS = [
   './',
   './index.html',

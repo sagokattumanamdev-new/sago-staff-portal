@@ -42,9 +42,19 @@ async function logHistory(actor, subjectId, text) {
   }
 }
 
+function genUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 const SYSTEM_ROSTER = [
   {
-    id: '11111111-1111-1111-1111-111111111111',
+    id: '3d6f00d2-829b-4585-ae6f-930d7cd83ae9',
     name: 'SAGO',
     role: 'superadmin',
     dept: 'All',
@@ -54,7 +64,7 @@ const SYSTEM_ROSTER = [
     aliases: ['sago@sago.app', 'sago@sago', 'sago']
   },
   {
-    id: '22222222-2222-2222-2222-222222222222',
+    id: 'a645e373-1c7d-470e-ac12-62831fe3a432',
     name: 'Er. G. Sakthimohan',
     role: 'admin',
     dept: 'Both',
@@ -74,7 +84,7 @@ const SYSTEM_ROSTER = [
     aliases: ['gokulnath@sago.app', 'gokulnath@sago', 'gokulnath', 'gokulnath2gn@gmail.com']
   },
   {
-    id: '44444444-4444-4444-4444-444444444444',
+    id: 'faaf4340-b00e-43d7-8692-1c71120f4f54',
     name: 'Ragul',
     role: 'employee',
     dept: 'Construction',
@@ -84,7 +94,7 @@ const SYSTEM_ROSTER = [
     aliases: ['ragul', 'ragul@sago.com']
   },
   {
-    id: '55555555-5555-5555-5555-555555555555',
+    id: '327f20a3-2cd3-4e51-9cc3-966612e3f279',
     name: 'Jeeva',
     role: 'employee',
     dept: 'Construction',
@@ -170,17 +180,7 @@ export async function signInPassword(email, pass) {
   const cleanPass = String(pass || '').trim();
   const cleanPassLower = cleanPass.toLowerCase();
   
-  // 1. Look up if profile exists in Supabase DB by email or handle
-  let dbProfile = null;
-  try {
-    const sb = await client();
-    const { data: byEmail } = await sb.from('profiles').select('*').ilike('email', norm).maybeSingle();
-    if (byEmail) {
-      dbProfile = byEmail;
-    }
-  } catch (e) {}
-
-  // 2. Check built-in roster
+  // 1. Check built-in roster
   const inputHandle = norm.includes('@') ? norm.split('@')[0] : norm;
   const match = SYSTEM_ROSTER.find(u => {
     const ue = u.email.toLowerCase();
@@ -194,6 +194,17 @@ export async function signInPassword(email, pass) {
     );
   });
 
+  // 2. Look up if profile exists in Supabase DB by email
+  let dbProfile = null;
+  const lookupEmail = match ? match.email : norm;
+  try {
+    const sb = await client();
+    const { data: byEmail } = await sb.from('profiles').select('*').ilike('email', lookupEmail).maybeSingle();
+    if (byEmail) {
+      dbProfile = byEmail;
+    }
+  } catch (e) {}
+
   if (match) {
     const expectedPass = String(match.pass || '').trim();
     if (expectedPass === cleanPass || expectedPass.toLowerCase() === cleanPassLower) {
@@ -204,7 +215,8 @@ export async function signInPassword(email, pass) {
           name: dbProfile.name || match.name,
           role: dbProfile.role || match.role,
           dept: dbProfile.dept || match.dept,
-          phone: dbProfile.phone || match.phone
+          phone: dbProfile.phone || match.phone,
+          email: dbProfile.email || match.email
         } : {}),
         pass: undefined,
         aliases: undefined
@@ -219,7 +231,7 @@ export async function signInPassword(email, pass) {
           dept: user.dept,
           phone: user.phone,
           email: user.email
-        }], { onConflict: 'email' });
+        }], { onConflict: 'id' });
         logHistory(user, user.id, `${user.name} signed in`);
       } catch (e) {}
       return { user };
@@ -483,8 +495,29 @@ export async function listTasks(user) {
   // Merge cloud tasks and local tasks
   const localTasks = getLocalTasks();
   const allMap = new Map();
-  [...cloudTasks, ...localTasks].forEach(t => {
-    if (t && t.id && !allMap.has(t.id)) allMap.set(t.id, t);
+  localTasks.forEach(t => { if (t && t.id) allMap.set(t.id, t); });
+  cloudTasks.forEach(t => {
+    if (!t || !t.id) return;
+    const existing = allMap.get(t.id);
+    if (existing) {
+      const repMap = new Map();
+      (existing.replies || []).forEach(r => {
+        const key = r.id || `${r.at || r.created_at}_${r.text}`;
+        repMap.set(key, r);
+      });
+      (t.replies || []).forEach(r => {
+        const key = r.id || `${r.created_at || r.at}_${r.text}`;
+        repMap.set(key, r);
+      });
+      allMap.set(t.id, {
+        ...existing,
+        ...t,
+        status: (existing.status === 'done' || t.status === 'done') ? 'done' : (t.status || existing.status),
+        replies: Array.from(repMap.values())
+      });
+    } else {
+      allMap.set(t.id, t);
+    }
   });
   const allTasks = Array.from(allMap.values());
 
@@ -602,7 +635,7 @@ export async function createTask(d, actor) {
   }
   if (!target) return { error: 'Pick a valid person to assign.' };
 
-  const taskId = 't_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6);
+  const taskId = genUUID();
   const newTask = {
     id: taskId,
     title: String(d.title || '').trim(),
@@ -778,8 +811,9 @@ export async function replyTask(taskId, user, text, photo) {
     uploadedPhoto = await uploadTaskPhoto(photo, taskId, user?.id);
   }
 
+  const replyId = genUUID();
   const replyObj = {
-    id: 'r_' + Date.now().toString(36),
+    id: replyId,
     task_id: taskId,
     user_id: user.id,
     by: user.id,
@@ -802,6 +836,7 @@ export async function replyTask(taskId, user, text, photo) {
   try {
     const sb = await client();
     await sb.from('task_replies').insert([{
+      id: replyId,
       task_id: taskId,
       user_id: user.id,
       name: user.name,
@@ -809,7 +844,9 @@ export async function replyTask(taskId, user, text, photo) {
       photo: uploadedPhoto || null
     }]);
     await sb.from('tasks').update({ status: 'in-progress' }).eq('id', taskId).eq('status', 'assigned');
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Reply insert notice:', e);
+  }
 
   await logHistory(user, taskId, `${user.name} ${photo ? 'sent a proof photo 📷' : 'replied'} on task`);
   return { reply: replyObj };
